@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Charging Bypass</title>
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface2: #252525;
+  --primary: #4caf50;
+  --primary-dark: #388e3c;
+  --accent: #ff9800;
+  --danger: #f44336;
+  --text: #e0e0e0;
+  --text2: #888;
+  --border: #2a2a2a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'Roboto', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+  -webkit-user-select: none;
+  user-select: none;
+  padding-bottom: 32px;
+}
+.header { text-align: center; padding: 20px 0 12px; }
+.header h1 { font-size: 22px; font-weight: 600; }
+.header .sub { color: var(--text2); font-size: 13px; margin-top: 2px; }
+
+.sbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; background: var(--surface); border-radius: 10px;
+  margin-bottom: 14px; font-size: 13px; color: var(--text2);
+}
+.sdot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--primary); flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+.sdot.err { background: var(--danger); animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.card {
+  background: var(--surface); border-radius: 14px;
+  padding: 18px; margin-bottom: 14px;
+}
+.sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sitem {
+  background: var(--surface2); border-radius: 10px;
+  padding: 14px; text-align: center;
+}
+.sitem .val { font-size: 26px; font-weight: 700; margin-bottom: 2px; }
+.sitem .lbl {
+  font-size: 11px; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.sitem.st-charging .val { color: var(--primary); }
+.sitem.st-discharging .val { color: var(--text2); }
+.sitem.st-stopped .val { color: var(--accent); }
+.sitem.st-bypass .val { color: var(--danger); }
+
+.bbar {
+  width: 100%; height: 10px; background: var(--surface2);
+  border-radius: 5px; margin-top: 12px; overflow: hidden;
+}
+.bfill { height: 100%; border-radius: 5px; transition: width .6s, background .6s; }
+.markers { position: relative; height: 20px; margin-top: 4px; }
+.mk {
+  position: absolute; top: 0; width: 2px; height: 10px;
+  transform: translateX(-50%);
+}
+.mk.start { background: var(--primary); }
+.mk.stop { background: var(--accent); }
+.mk span {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: var(--text2); white-space: nowrap;
+}
+
+.srow {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 10px 0;
+}
+.srow + .srow { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 14px; }
+.srow h3 { font-size: 15px; font-weight: 500; margin-bottom: 1px; }
+.srow p { font-size: 12px; color: var(--text2); }
+
+.tog { position: relative; width: 50px; height: 26px; flex-shrink: 0; }
+.tog input { opacity: 0; width: 0; height: 0; }
+.tog .sl {
+  position: absolute; inset: 0; background: #444;
+  border-radius: 13px; cursor: pointer; transition: .3s;
+}
+.tog .sl::before {
+  content: ''; position: absolute; width: 20px; height: 20px;
+  left: 3px; bottom: 3px; background: #fff;
+  border-radius: 50%; transition: .3s;
+}
+.tog input:checked + .sl { background: var(--primary); }
+.tog input:checked + .sl::before { transform: translateX(24px); }
+
+.rg { margin-top: 14px; }
+.rg + .rg { margin-top: 18px; }
+.rh { display: flex; justify-content: space-between; align-items: center; }
+.rh .rl { font-size: 13px; color: var(--text2); }
+
+.num-input {
+  width: 72px; padding: 8px 4px; border: 2px solid var(--border);
+  border-radius: 10px; background: var(--surface2); color: var(--text);
+  font-size: 20px; font-weight: 700; text-align: center; outline: none;
+  -moz-appearance: textfield;
+}
+.num-input::-webkit-outer-spin-button,
+.num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.num-input:focus { border-color: var(--primary); }
+.num-input.stop:focus { border-color: var(--accent); }
+.num-input.start { color: var(--primary); }
+.num-input.stop { color: var(--accent); }
+.num-input:disabled { opacity: .4; }
+.num-unit { font-size: 16px; font-weight: 600; color: var(--text2); margin-left: 2px; }
+
+.btn {
+  display: block; width: 100%; padding: 14px; border: none;
+  border-radius: 12px; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: .2s; margin-top: 4px;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:active { background: var(--primary-dark); transform: scale(.98); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.ninfo {
+  margin-top: 8px; padding: 8px 12px; background: var(--surface2);
+  border-radius: 8px; font-size: 11px; color: var(--text2);
+  word-break: break-all;
+}
+
+.toast-el {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--surface); color: var(--text);
+  padding: 12px 24px; border-radius: 10px; font-size: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5); transition: transform .3s;
+  z-index: 100; pointer-events: none;
+}
+.toast-el.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚡ Charging Bypass</h1>
+  <div class="sub">スマート充電管理</div>
+</div>
+
+<div class="sbar">
+  <div class="sdot" id="sDot"></div>
+  <span id="sText">接続中...</span>
+</div>
+
+<!-- Status -->
+<div class="card">
+  <div class="sgrid">
+    <div class="sitem" id="cBatt">
+      <div class="val" id="vBatt">--%</div>
+      <div class="lbl">バッテリー</div>
+    </div>
+    <div class="sitem" id="cChg">
+      <div class="val" id="vChg">--</div>
+      <div class="lbl">充電状態</div>
+    </div>
+    <div class="sitem" id="cScr">
+      <div class="val" id="vScr">--</div>
+      <div class="lbl">画面</div>
+    </div>
+    <div class="sitem" id="cByp">
+      <div class="val" id="vByp">--</div>
+      <div class="lbl">バイパス</div>
+    </div>
+  </div>
+  <div class="bbar"><div class="bfill" id="bFill"></div></div>
+  <div class="markers">
+    <div class="mk start" id="mkStart" style="left:20%"><span>開始 20%</span></div>
+    <div class="mk stop" id="mkStop" style="left:80%"><span>停止 80%</span></div>
+  </div>
+</div>
+
+<!-- Toggles -->
+<div class="card">
+  <div class="srow">
+    <div>
+      <h3>📱 画面連動制御</h3>
+      <p>画面ON→充電停止 / OFF→充電再開</p>
+    </div>
+    <label class="tog">
+      <input type="checkbox" id="optScreen" checked>
+      <span class="sl"></span>
+    </label>
+  </div>
+  <div class="srow">
+    <div>
+      <h3>🔋 バッテリー残量監視</h3>
+      <p>指定残量で充電の開始/停止を自動制御</p>
+    </div>
+    <label class="tog">
+      <input type="checkbox" id="optMonitor" checked>
+      <span class="sl"></span>
+    </label>
+  </div>
+</div>
+
+<!-- Thresholds -->
+<div class="card" id="cThresh">
+  <div class="rg">
+    <div class="rh">
+      <span class="rl">🟢 充電開始残量</span>
+      <div><input type="number" class="num-input start" id="rStart" min="5" max="95" value="20" inputmode="numeric"><span class="num-unit">%</span></div>
+    </div>
+  </div>
+  <div class="rg">
+    <div class="rh">
+      <span class="rl">🟠 充電停止残量</span>
+      <div><input type="number" class="num-input stop" id="rStop" min="10" max="100" value="80" inputmode="numeric"><span class="num-unit">%</span></div>
+    </div>
+  </div>
+</div>
+
+<button class="btn btn-primary" id="btnSave">💾 設定を保存</button>
+
+<div class="ninfo" id="nodeBox" style="display:none">
+  充電制御ノード: <span id="nodeText">--</span>
+</div>
+
+<div class="toast-el" id="toastEl"></div>
+
+<script type="module">
+const MODDIR = '/data/adb/modules/chargingbypass_miatoll';
+const CONF = MODDIR + '/config.conf';
+const STATE = MODDIR + '/state.conf';
+
+let execFn = null;
+
+async function initAPI() {
+  try {
+    const m = await import('kernelsu');
+    execFn = m.exec;
+    return true;
+  } catch (e) {
+    console.error('KernelSU API unavailable:', e);
+    return false;
+  }
+}
+
+async function run(cmd) {
+  if (!execFn) return { errno: -1, stdout: '', stderr: 'no api' };
+  try { return await execFn(cmd); }
+  catch (e) { return { errno: -1, stdout: '', stderr: e.message }; }
+}
+
+function toast(msg) {
+  const el = document.getElementById('toastEl');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function parseKV(text) {
+  const o = {};
+  for (const line of text.split('\n')) {
+    const i = line.indexOf('=');
+    if (i > 0) o[line.substring(0, i).trim()] = line.substring(i + 1).trim();
+  }
+  return o;
+}
+
+/* --- Status --- */
+const statusMap = {
+  Charging: '充電中', Discharging: '放電中',
+  'Not charging': '停止', Full: '満充電', Unknown: '不明'
+};
+
+async function refreshStatus() {
+  const r = await run('cat ' + STATE + ' 2>/dev/null');
+  if (r.errno !== 0 || !r.stdout.trim()) {
+    setSvc('err', 'サービス未起動');
+    return;
+  }
+  const s = parseKV(r.stdout);
+  const lv = parseInt(s.BATTERY_LEVEL) || 0;
+  const st = s.CHARGING_STATUS || 'Unknown';
+  const scr = s.SCREEN_STATE || '--';
+  const byp = s.BYPASS_ACTIVE === '1';
+
+  document.getElementById('vBatt').textContent = lv + '%';
+  document.getElementById('vChg').textContent = statusMap[st] || st;
+  document.getElementById('vScr').textContent = scr;
+  document.getElementById('vByp').textContent = byp ? 'ON' : 'OFF';
+
+  // Card classes
+  const cChg = document.getElementById('cChg');
+  cChg.className = 'sitem';
+  if (st === 'Charging') cChg.classList.add('st-charging');
+  else if (st === 'Not charging') cChg.classList.add('st-stopped');
+  else cChg.classList.add('st-discharging');
+
+  const cByp = document.getElementById('cByp');
+  cByp.className = 'sitem';
+  if (byp) cByp.classList.add('st-bypass');
+
+  // Battery bar
+  const fill = document.getElementById('bFill');
+  fill.style.width = lv + '%';
+  fill.style.background = lv <= 20 ? '#f44336' : lv <= 50 ? '#ff9800' : '#4caf50';
+
+  setSvc('ok', '動作中 — ' + (s.LAST_UPDATE || ''));
+}
+
+function setSvc(type, txt) {
+  const dot = document.getElementById('sDot');
+  dot.className = 'sdot' + (type === 'err' ? ' err' : '');
+  document.getElementById('sText').textContent = txt;
+}
+
+/* --- Config --- */
+async function loadConfig() {
+  const r = await run('cat ' + CONF + ' 2>/dev/null');
+  if (r.errno !== 0 || !r.stdout.trim()) return;
+  const c = parseKV(r.stdout);
+
+  if (c.SCREEN_CONTROL !== undefined)
+    document.getElementById('optScreen').checked = c.SCREEN_CONTROL === '1';
+  if (c.BATTERY_MONITOR !== undefined)
+    document.getElementById('optMonitor').checked = c.BATTERY_MONITOR === '1';
+  if (c.CHARGE_START !== undefined)
+    document.getElementById('rStart').value = c.CHARGE_START;
+  if (c.CHARGE_STOP !== undefined)
+    document.getElementById('rStop').value = c.CHARGE_STOP;
+  syncUI();
+}
+
+async function saveConfig() {
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = '⏳ 保存中...';
+
+  const sc = document.getElementById('optScreen').checked ? 1 : 0;
+  const bm = document.getElementById('optMonitor').checked ? 1 : 0;
+  let lo = Math.max(5, Math.min(95, parseInt(document.getElementById('rStart').value) || 20));
+  let hi = Math.max(10, Math.min(100, parseInt(document.getElementById('rStop').value) || 80));
+  if (lo >= hi) { lo = hi - 5; if (lo < 5) lo = 5; }
+  document.getElementById('rStart').value = lo;
+  document.getElementById('rStop').value = hi;
+
+  const cmd = "printf '%s\\n' "
+    + "'SCREEN_CONTROL=" + sc + "' "
+    + "'BATTERY_MONITOR=" + bm + "' "
+    + "'CHARGE_START=" + lo + "' "
+    + "'CHARGE_STOP=" + hi + "' "
+    + "> " + CONF;
+
+  const r = await run(cmd);
+  toast(r.errno === 0 ? '✅ 設定を保存しました' : '❌ 保存失敗: ' + r.stderr);
+
+  btn.disabled = false;
+  btn.textContent = '💾 設定を保存';
+  syncUI();
+}
+
+/* --- Node info --- */
+async function loadNode() {
+  const r = await run('cat ' + MODDIR + '/charging_node 2>/dev/null');
+  if (r.errno === 0 && r.stdout.trim()) {
+    document.getElementById('nodeText').textContent = r.stdout.trim();
+    document.getElementById('nodeBox').style.display = '';
+  }
+}
+
+/* --- UI sync --- */
+function syncUI() {
+  const mon = document.getElementById('optMonitor').checked;
+  document.getElementById('cThresh').style.opacity = mon ? '1' : '.4';
+  document.getElementById('rStart').disabled = !mon;
+  document.getElementById('rStop').disabled = !mon;
+
+  const lo = document.getElementById('rStart').value;
+  const hi = document.getElementById('rStop').value;
+  const mkS = document.getElementById('mkStart');
+  const mkP = document.getElementById('mkStop');
+  mkS.style.left = lo + '%';
+  mkS.querySelector('span').textContent = '開始 ' + lo + '%';
+  mkP.style.left = hi + '%';
+  mkP.querySelector('span').textContent = '停止 ' + hi + '%';
+}
+
+/* --- Events --- */
+document.getElementById('rStart').addEventListener('input', syncUI);
+document.getElementById('rStop').addEventListener('input', syncUI);
+document.getElementById('optMonitor').addEventListener('change', syncUI);
+document.getElementById('btnSave').addEventListener('click', saveConfig);
+
+/* --- Init --- */
+(async () => {
+  if (!await initAPI()) {
+    setSvc('err', 'KernelSU API に接続できません');
+    return;
+  }
+  await loadConfig();
+  await refreshStatus();
+  await loadNode();
+  setInterval(refreshStatus, 5000);
+})();
+</script>
+</body>
+</html>
