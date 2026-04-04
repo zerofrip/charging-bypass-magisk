@@ -249,7 +249,7 @@ body {
 
 <div class="toast-el" id="toastEl"></div>
 
-<script type="module">
+<script>
 /* ===== i18n ===== */
 const I18N = {
   en: {
@@ -338,23 +338,31 @@ const MODDIR = '/data/adb/modules/chargingbypass_miatoll';
 const CONF = MODDIR + '/config.conf';
 const STATE = MODDIR + '/state.conf';
 
-let execFn = null;
+let _cbId = 0;
 
-async function initAPI() {
-  try {
-    const m = await import('kernelsu');
-    execFn = m.exec;
-    return true;
-  } catch (e) {
-    console.error('API unavailable:', e);
-    return false;
-  }
+function initAPI() {
+  // Both KernelSU and APatch inject window.ksu via addJavascriptInterface
+  return !!(window.ksu && typeof window.ksu.exec === 'function');
 }
 
-async function run(cmd) {
-  if (!execFn) return { errno: -1, stdout: '', stderr: 'no api' };
-  try { return await execFn(cmd); }
-  catch (e) { return { errno: -1, stdout: '', stderr: e.message }; }
+function run(cmd) {
+  return new Promise(function(resolve) {
+    if (!window.ksu || typeof window.ksu.exec !== 'function') {
+      resolve({ errno: -1, stdout: '', stderr: 'no api' });
+      return;
+    }
+    var cbName = '__cb_' + (++_cbId) + '_' + Date.now();
+    window[cbName] = function(errno, stdout, stderr) {
+      delete window[cbName];
+      resolve({ errno: errno, stdout: stdout || '', stderr: stderr || '' });
+    };
+    try {
+      window.ksu.exec(cmd, cbName);
+    } catch (e) {
+      delete window[cbName];
+      resolve({ errno: -1, stdout: '', stderr: e.message });
+    }
+  });
 }
 
 function toast(msg) {
@@ -499,7 +507,7 @@ document.getElementById('btnSave').addEventListener('click', saveConfig);
 /* --- Init --- */
 (async () => {
   applyI18n();
-  if (!await initAPI()) {
+  if (!initAPI()) {
     setSvc('err', t('no_api'));
     return;
   }
