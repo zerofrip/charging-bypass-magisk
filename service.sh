@@ -28,7 +28,7 @@ load_config() {
 }
 
 detect_charging_node() {
-  # Qualcomm / common
+  # Qualcomm / common (0=disable, 1=enable)
   for node in \
     /sys/class/power_supply/battery/charging_enabled \
     /sys/class/power_supply/battery/battery_charging_enabled \
@@ -40,10 +40,11 @@ detect_charging_node() {
       return 0
     fi
   done
-  # input_suspend (inverted: 1=disable, 0=enable)
+  # input_suspend / battery disable / MTK power path (inverted: 1=disable, 0=enable)
   for node in \
     /sys/class/power_supply/battery/input_suspend \
     /sys/class/power_supply/usb/input_suspend \
+    /sys/class/power_supply/battery/disable \
   ; do
     if [ -f "$node" ] && [ -w "$node" ]; then
       CHARGE_NODE="$node"
@@ -51,6 +52,21 @@ detect_charging_node() {
       return 0
     fi
   done
+  # MTK platform charger power path (0=disable, 1=enable)
+  local mtk_pp="/sys/devices/platform/charger/enable_power_path"
+  if [ -f "$mtk_pp" ] && [ -w "$mtk_pp" ]; then
+    CHARGE_NODE="$mtk_pp"
+    NODE_INVERTED=0
+    return 0
+  fi
+  # Last resort: try writing to battery/disable even if -w fails (sysfs quirk)
+  if [ -f "/sys/class/power_supply/battery/disable" ]; then
+    if echo 0 > /sys/class/power_supply/battery/disable 2>/dev/null; then
+      CHARGE_NODE="/sys/class/power_supply/battery/disable"
+      NODE_INVERTED=1
+      return 0
+    fi
+  fi
   return 1
 }
 

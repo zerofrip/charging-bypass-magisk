@@ -14,6 +14,9 @@ for node in \
 ; do
   [ -w "$node" ] && echo 0 > "$node" 2>/dev/null
 done
+# MTK: battery/disable (0=enable) and power path (1=enable)
+[ -f "/sys/class/power_supply/battery/disable" ] && echo 0 > /sys/class/power_supply/battery/disable 2>/dev/null
+[ -f "/sys/devices/platform/charger/enable_power_path" ] && echo 1 > /sys/devices/platform/charger/enable_power_path 2>/dev/null
 
 # Kill daemon
 [ -f "$MODDIR/daemon.pid" ] && kill "$(cat "$MODDIR/daemon.pid")" 2>/dev/null

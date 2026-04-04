@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -32,6 +32,13 @@ body {
 .header { text-align: center; padding: 20px 0 12px; }
 .header h1 { font-size: 22px; font-weight: 600; }
 .header .sub { color: var(--text2); font-size: 13px; margin-top: 2px; }
+
+.lang-sw {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 10px; font-size: 12px;
+  color: var(--text2); cursor: pointer; outline: none;
+}
 
 .sbar {
   display: flex; align-items: center; gap: 8px;
@@ -152,14 +159,19 @@ body {
 </head>
 <body>
 
+<select class="lang-sw" id="langSw">
+  <option value="en">EN</option>
+  <option value="ja">日本語</option>
+</select>
+
 <div class="header">
   <h1>⚡ Charging Bypass</h1>
-  <div class="sub">スマート充電管理</div>
+  <div class="sub" data-i18n="subtitle"></div>
 </div>
 
 <div class="sbar">
   <div class="sdot" id="sDot"></div>
-  <span id="sText">接続中...</span>
+  <span id="sText" data-i18n="connecting"></span>
 </div>
 
 <!-- Status -->
@@ -167,25 +179,25 @@ body {
   <div class="sgrid">
     <div class="sitem" id="cBatt">
       <div class="val" id="vBatt">--%</div>
-      <div class="lbl">バッテリー</div>
+      <div class="lbl" data-i18n="battery"></div>
     </div>
     <div class="sitem" id="cChg">
       <div class="val" id="vChg">--</div>
-      <div class="lbl">充電状態</div>
+      <div class="lbl" data-i18n="charge_status"></div>
     </div>
     <div class="sitem" id="cScr">
       <div class="val" id="vScr">--</div>
-      <div class="lbl">画面</div>
+      <div class="lbl" data-i18n="screen"></div>
     </div>
     <div class="sitem" id="cByp">
       <div class="val" id="vByp">--</div>
-      <div class="lbl">バイパス</div>
+      <div class="lbl" data-i18n="bypass"></div>
     </div>
   </div>
   <div class="bbar"><div class="bfill" id="bFill"></div></div>
   <div class="markers">
-    <div class="mk start" id="mkStart" style="left:20%"><span>開始 20%</span></div>
-    <div class="mk stop" id="mkStop" style="left:80%"><span>停止 80%</span></div>
+    <div class="mk start" id="mkStart" style="left:20%"><span></span></div>
+    <div class="mk stop" id="mkStop" style="left:80%"><span></span></div>
   </div>
 </div>
 
@@ -193,8 +205,8 @@ body {
 <div class="card">
   <div class="srow">
     <div>
-      <h3>📱 画面連動制御</h3>
-      <p>画面ON→充電停止 / OFF→充電再開</p>
+      <h3 data-i18n="screen_control_title"></h3>
+      <p data-i18n="screen_control_desc"></p>
     </div>
     <label class="tog">
       <input type="checkbox" id="optScreen" checked>
@@ -203,8 +215,8 @@ body {
   </div>
   <div class="srow">
     <div>
-      <h3>🔋 バッテリー残量監視</h3>
-      <p>指定残量で充電の開始/停止を自動制御</p>
+      <h3 data-i18n="monitor_title"></h3>
+      <p data-i18n="monitor_desc"></p>
     </div>
     <label class="tog">
       <input type="checkbox" id="optMonitor" checked>
@@ -217,27 +229,111 @@ body {
 <div class="card" id="cThresh">
   <div class="rg">
     <div class="rh">
-      <span class="rl">🟢 充電開始残量</span>
+      <span class="rl" data-i18n="charge_start"></span>
       <div><input type="number" class="num-input start" id="rStart" min="5" max="95" value="20" inputmode="numeric"><span class="num-unit">%</span></div>
     </div>
   </div>
   <div class="rg">
     <div class="rh">
-      <span class="rl">🟠 充電停止残量</span>
+      <span class="rl" data-i18n="charge_stop"></span>
       <div><input type="number" class="num-input stop" id="rStop" min="10" max="100" value="80" inputmode="numeric"><span class="num-unit">%</span></div>
     </div>
   </div>
 </div>
 
-<button class="btn btn-primary" id="btnSave">💾 設定を保存</button>
+<button class="btn btn-primary" id="btnSave" data-i18n="save"></button>
 
 <div class="ninfo" id="nodeBox" style="display:none">
-  充電制御ノード: <span id="nodeText">--</span>
+  <span data-i18n="node_label"></span> <span id="nodeText">--</span>
 </div>
 
 <div class="toast-el" id="toastEl"></div>
 
 <script type="module">
+/* ===== i18n ===== */
+const I18N = {
+  en: {
+    subtitle: 'Smart Charging Control',
+    connecting: 'Connecting...',
+    battery: 'Battery',
+    charge_status: 'Charge',
+    screen: 'Screen',
+    bypass: 'Bypass',
+    screen_control_title: '📱 Screen-linked Control',
+    screen_control_desc: 'Screen ON → Stop charging / OFF → Resume',
+    monitor_title: '🔋 Battery Level Monitor',
+    monitor_desc: 'Auto start/stop charging at set levels',
+    charge_start: '🟢 Start charging at',
+    charge_stop: '🟠 Stop charging at',
+    save: '💾 Save Settings',
+    saving: '⏳ Saving...',
+    save_ok: '✅ Settings saved',
+    save_fail: '❌ Save failed: ',
+    node_label: 'Charging node:',
+    svc_stopped: 'Service not running',
+    svc_running: 'Running — ',
+    no_api: 'Cannot connect to KernelSU / APatch API',
+    mk_start: 'Start ',
+    mk_stop: 'Stop ',
+    st_charging: 'Charging',
+    st_discharging: 'Discharging',
+    st_stopped: 'Stopped',
+    st_full: 'Full',
+    st_unknown: 'Unknown',
+  },
+  ja: {
+    subtitle: 'スマート充電管理',
+    connecting: '接続中...',
+    battery: 'バッテリー',
+    charge_status: '充電状態',
+    screen: '画面',
+    bypass: 'バイパス',
+    screen_control_title: '📱 画面連動制御',
+    screen_control_desc: '画面ON→充電停止 / OFF→充電再開',
+    monitor_title: '🔋 バッテリー残量監視',
+    monitor_desc: '指定残量で充電の開始/停止を自動制御',
+    charge_start: '🟢 充電開始残量',
+    charge_stop: '🟠 充電停止残量',
+    save: '💾 設定を保存',
+    saving: '⏳ 保存中...',
+    save_ok: '✅ 設定を保存しました',
+    save_fail: '❌ 保存失敗: ',
+    node_label: '充電制御ノード:',
+    svc_stopped: 'サービス未起動',
+    svc_running: '動作中 — ',
+    no_api: 'KernelSU / APatch API に接続できません',
+    mk_start: '開始 ',
+    mk_stop: '停止 ',
+    st_charging: '充電中',
+    st_discharging: '放電中',
+    st_stopped: '停止',
+    st_full: '満充電',
+    st_unknown: '不明',
+  }
+};
+
+let lang = (navigator.language || '').startsWith('ja') ? 'ja' : 'en';
+
+function t(key) { return (I18N[lang] || I18N.en)[key] || key; }
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.documentElement.lang = lang;
+  syncUI();
+}
+
+document.getElementById('langSw').value = lang;
+document.getElementById('langSw').addEventListener('change', e => {
+  lang = e.target.value;
+  localStorage.setItem('cb_lang', lang);
+  applyI18n();
+});
+const savedLang = localStorage.getItem('cb_lang');
+if (savedLang && I18N[savedLang]) lang = savedLang;
+
+/* ===== API ===== */
 const MODDIR = '/data/adb/modules/chargingbypass_miatoll';
 const CONF = MODDIR + '/config.conf';
 const STATE = MODDIR + '/state.conf';
@@ -250,7 +346,7 @@ async function initAPI() {
     execFn = m.exec;
     return true;
   } catch (e) {
-    console.error('KernelSU API unavailable:', e);
+    console.error('API unavailable:', e);
     return false;
   }
 }
@@ -278,15 +374,15 @@ function parseKV(text) {
 }
 
 /* --- Status --- */
-const statusMap = {
-  Charging: '充電中', Discharging: '放電中',
-  'Not charging': '停止', Full: '満充電', Unknown: '不明'
+const statusKeyMap = {
+  Charging: 'st_charging', Discharging: 'st_discharging',
+  'Not charging': 'st_stopped', Full: 'st_full', Unknown: 'st_unknown'
 };
 
 async function refreshStatus() {
   const r = await run('cat ' + STATE + ' 2>/dev/null');
   if (r.errno !== 0 || !r.stdout.trim()) {
-    setSvc('err', 'サービス未起動');
+    setSvc('err', t('svc_stopped'));
     return;
   }
   const s = parseKV(r.stdout);
@@ -296,11 +392,10 @@ async function refreshStatus() {
   const byp = s.BYPASS_ACTIVE === '1';
 
   document.getElementById('vBatt').textContent = lv + '%';
-  document.getElementById('vChg').textContent = statusMap[st] || st;
+  document.getElementById('vChg').textContent = t(statusKeyMap[st] || 'st_unknown');
   document.getElementById('vScr').textContent = scr;
   document.getElementById('vByp').textContent = byp ? 'ON' : 'OFF';
 
-  // Card classes
   const cChg = document.getElementById('cChg');
   cChg.className = 'sitem';
   if (st === 'Charging') cChg.classList.add('st-charging');
@@ -311,12 +406,11 @@ async function refreshStatus() {
   cByp.className = 'sitem';
   if (byp) cByp.classList.add('st-bypass');
 
-  // Battery bar
   const fill = document.getElementById('bFill');
   fill.style.width = lv + '%';
   fill.style.background = lv <= 20 ? '#f44336' : lv <= 50 ? '#ff9800' : '#4caf50';
 
-  setSvc('ok', '動作中 — ' + (s.LAST_UPDATE || ''));
+  setSvc('ok', t('svc_running') + (s.LAST_UPDATE || ''));
 }
 
 function setSvc(type, txt) {
@@ -345,7 +439,7 @@ async function loadConfig() {
 async function saveConfig() {
   const btn = document.getElementById('btnSave');
   btn.disabled = true;
-  btn.textContent = '⏳ 保存中...';
+  btn.textContent = t('saving');
 
   const sc = document.getElementById('optScreen').checked ? 1 : 0;
   const bm = document.getElementById('optMonitor').checked ? 1 : 0;
@@ -363,10 +457,10 @@ async function saveConfig() {
     + "> " + CONF;
 
   const r = await run(cmd);
-  toast(r.errno === 0 ? '✅ 設定を保存しました' : '❌ 保存失敗: ' + r.stderr);
+  toast(r.errno === 0 ? t('save_ok') : t('save_fail') + r.stderr);
 
   btn.disabled = false;
-  btn.textContent = '💾 設定を保存';
+  btn.textContent = t('save');
   syncUI();
 }
 
@@ -391,9 +485,9 @@ function syncUI() {
   const mkS = document.getElementById('mkStart');
   const mkP = document.getElementById('mkStop');
   mkS.style.left = lo + '%';
-  mkS.querySelector('span').textContent = '開始 ' + lo + '%';
+  mkS.querySelector('span').textContent = t('mk_start') + lo + '%';
   mkP.style.left = hi + '%';
-  mkP.querySelector('span').textContent = '停止 ' + hi + '%';
+  mkP.querySelector('span').textContent = t('mk_stop') + hi + '%';
 }
 
 /* --- Events --- */
@@ -404,8 +498,9 @@ document.getElementById('btnSave').addEventListener('click', saveConfig);
 
 /* --- Init --- */
 (async () => {
+  applyI18n();
   if (!await initAPI()) {
-    setSvc('err', 'KernelSU API に接続できません');
+    setSvc('err', t('no_api'));
     return;
   }
   await loadConfig();
